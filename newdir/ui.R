@@ -77,7 +77,7 @@ body <- dashboardBody(
                    inline = TRUE),
       
       tags$hr(),
-      plotOutput('plot_1')
+      plotOutput('plot')
     )
   )
 )

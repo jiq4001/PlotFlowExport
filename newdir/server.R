@@ -7,7 +7,9 @@ server <- function(input, output, session) {
   
   # readin upload csv file
   read.in <- eventReactive(input$file.in, {
-    req(input$file1)
+    validate(
+      need(!is.null(input$file1), "File path is required")
+    )
     df <- read.csv(input$file1$datapath) %>%
       janitor::clean_names() %>%
       mutate_if(is.character, as.factor)
@@ -96,41 +98,42 @@ server <- function(input, output, session) {
     data_2_plot()
   })
   
+  #https://gist.github.com/wch/5436415
   # update if normalized by baseline
   # generate plot
-  
-  plot_1 <- eventReactive({
-    validate(
-      need(!is.null(data_2_plot_1()), "Wait for data update")
-    )
-    lapply(input$column_2_plot, function(x){
-      plot_1 <- data_2_plot_1()[, c(input$meta_col, x)] %>%
-        ggplot(aes(input$timepoint, x, color = input$group))
-      
-      if(input$plot_tpye == "Dot"){
-        plot_1 <- plot_1+
-          geom_point()
-      }
-      else if(input$plot_tpye == "Box"){
-        plot_1 <- plot_1+
-          geom_boxplot()
-      }
-      else {
-        plot_1 <- plot_1+
-          geom_violin()
-      }
-      
-      if(!is.null(input$facet)){
-        plot_1 <- plot_1+
-          facet_wrap(. ~ input$facet)
-      }
-      plot_1
+  output$plot <- renderUI({
+    plot_list <- lapply(input$column_2_plot, function(x){
+      plot_name <- paste("plot", x, sep = "")
+      plotOutput(plot_name, width = "70%", height = "400px")
     })
+    do.call(tagList, plot_list)
   })
-
   
-  output$plot_1 <- renderPlot({
-    plot_1()
-  })
+  plot_1 <- reactive({
+    plot_1 <- data_2_plot_1()[, c(input$meta_col, input$column_2_plot[j])] %>%
+      ggplot(aes(!!as.symbol(input$timepoint), !!as.symbol(input$column_2_plot[j]), 
+                 color = !!as.symbol(input$group)))
     
+    if(input$plot_tpye == "Dot"){
+      plot_1 <- plot_1+
+        geom_point()
+    }
+    else if(input$plot_tpye == "Box"){
+      plot_1 <- plot_1+
+        geom_boxplot()
+    }
+    else {
+      plot_1 <- plot_1+
+        geom_violin()
+    }
+    
+    if(!is.null(input$facet)){
+      plot_1 <- plot_1+
+        facet_wrap(. ~ !!as.symbol(input$facet))
+    }
+    plot_1
+  })
+  
+  
+  
 }
