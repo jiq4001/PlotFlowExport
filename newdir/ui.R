@@ -77,6 +77,7 @@ body <- dashboardBody(
                    inline = TRUE),
       
       tags$hr(),
+      #DT::dataTableOutput("data_2_plot_u")
       plotOutput('plot')
     )
   )

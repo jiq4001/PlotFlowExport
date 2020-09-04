@@ -90,50 +90,74 @@ server <- function(input, output, session) {
                           choices = tp, multiple = T)
   })
   
+  
   # relevel timepoint update data for plot
   data_2_plot_1 <- eventReactive(input$update_tp, {
-    req(input$re_level_tp)
-    data_2_plot()[ ,input$timepoint] <- factor(data_2_plot()[ ,input$timepoint], 
+    req(input$re_level_tp, input$timepoint, data_2_plot())
+    temp <- data_2_plot()
+    temp[ ,input$timepoint] <- factor(temp[ ,input$timepoint], 
                                                levels = input$re_level_tp)
-    data_2_plot()
+    temp
   })
   
-  #https://gist.github.com/wch/5436415
+  #output$data_2_plot_u <- DT::renderDT({
+  #  data_2_plot_1()
+  #})
+  
+  #https://gist.github.com/wch/5436415 https://stackoverflow.com/questions/36799901/r-markdown-shiny-renderplot-list-of-plots-from-lapply
   # update if normalized by baseline
   # generate plot
-  output$plot <- renderUI({
-    plot_list <- lapply(input$column_2_plot, function(x){
+  
+  renderUI({
+    req(input$column_2_plot)
+    plot_list <- lapply(1 : length(input$column_2_plot), function(x){
       plot_name <- paste("plot", x, sep = "")
       plotOutput(plot_name, width = "70%", height = "400px")
     })
     do.call(tagList, plot_list)
   })
   
-  plot_1 <- reactive({
-    plot_1 <- data_2_plot_1()[, c(input$meta_col, input$column_2_plot[j])] %>%
-      ggplot(aes(!!as.symbol(input$timepoint), !!as.symbol(input$column_2_plot[j]), 
-                 color = !!as.symbol(input$group)))
-    
-    if(input$plot_tpye == "Dot"){
-      plot_1 <- plot_1+
-        geom_point()
+# plot_1 <- reactive({
+#   req(data_2_plot_1())
+#   lapply(input$column_2_plot, function(x){
+#     data_2_plot_1()[, c(input$meta_col, x)] 
+#     
+      #    if(input$plot_tpye == "Dot"){
+      #      plot_1 <- plot_1+
+      #        geom_point()
+      #    }
+      #    else if(input$plot_tpye == "Box"){
+      #      plot_1 <- plot_1+
+      #        geom_boxplot()
+      #    }
+      #    else {
+      #      plot_1 <- plot_1+
+      #        geom_violin()
+      #    }
+      #    
+      #    if(!is.null(input$facet)){
+      #      plot_1 <- plot_1+
+      #        facet_wrap(. ~ !!as.symbol(input$facet))
+      #    }
+#    })
+#  })
+  
+  
+  observe({
+    req(data_2_plot_1())
+    for(i in 1:length(input$column_2_plot)){
+      local({
+        mi <- i
+        plot_name <- paste("plot", mi, sep = "")
+        output[[plot_name]] <- renderPlot({
+          p <- data_2_plot_1()%>%
+            ggplot(aes_string(input$timepoint, input$column_2_plot[mi], 
+                       color = input$group))+
+            geom_point()
+          print(p)
+        })
+      })
     }
-    else if(input$plot_tpye == "Box"){
-      plot_1 <- plot_1+
-        geom_boxplot()
-    }
-    else {
-      plot_1 <- plot_1+
-        geom_violin()
-    }
-    
-    if(!is.null(input$facet)){
-      plot_1 <- plot_1+
-        facet_wrap(. ~ !!as.symbol(input$facet))
-    }
-    plot_1
   })
-  
-  
   
 }
