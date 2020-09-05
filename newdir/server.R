@@ -46,6 +46,7 @@ server <- function(input, output, session) {
   
   # selected column count histogram
   output$filt_row_hist <- renderPlot({
+    req(input$filt_row)
     hist(read.in()[[input$filt_row]], main = input$filt_row)
   })
   
@@ -104,19 +105,39 @@ server <- function(input, output, session) {
   #  data_2_plot_1()
   #})
   
+#  plot_1 <- reactive({
+#    req(data_2_plot_1())
+#    lapply(1:length(input$column_2_plot), function(x){
+#      ggplot(data_2_plot_1(), aes_string(x = input$timepoint, y = input$column_2_plot[x], 
+#                                              color = input$group))+
+#        geom_point()
+#    })
+#  })
+#  
+#  observe({
+#    req(plot_1())
+#    dl <- input$column_2_plot
+#    for(x in 1:length(input$column_2_plot)){
+#      output[[paste0('p', x)]] <- renderUI({
+#        paste(dl[x], "d")
+#      })
+#    }
+#  })
+  
   #https://gist.github.com/wch/5436415 https://stackoverflow.com/questions/36799901/r-markdown-shiny-renderplot-list-of-plots-from-lapply
   # update if normalized by baseline
   # generate plot
   
-  renderUI({
-    req(input$column_2_plot)
+  output$plot <- renderUI({
+    req(input$column_2_plot, data_2_plot_1())
+    
     plot_list <- lapply(1 : length(input$column_2_plot), function(x){
       plot_name <- paste("plot", x, sep = "")
-      plotOutput(plot_name, width = "70%", height = "400px")
+      plotOutput(plot_name, width = 700, height = 500)
     })
     do.call(tagList, plot_list)
   })
-  
+ 
 # plot_1 <- reactive({
 #   req(data_2_plot_1())
 #   lapply(input$column_2_plot, function(x){
@@ -145,14 +166,20 @@ server <- function(input, output, session) {
   
   observe({
     req(data_2_plot_1())
-    for(i in 1:length(input$column_2_plot)){
+    n <- length(input$column_2_plot)
+    
+    for(i in 1:n){
       local({
-        mi <- i
-        plot_name <- paste("plot", mi, sep = "")
+        df <- data_2_plot_1()
+        x_var <- input$timepoint
+        y_var <- input$column_2_plot[i]
+        g_var <- input$group
+        
+        plot_name <- paste("plot", i, sep = "")
+        
         output[[plot_name]] <- renderPlot({
-          p <- data_2_plot_1()%>%
-            ggplot(aes_string(input$timepoint, input$column_2_plot[mi], 
-                       color = input$group))+
+          p <- ggplot(df, aes_string(x = x_var, y = y_var, 
+                       color = g_var))+
             geom_point()
           print(p)
         })
