@@ -75,13 +75,13 @@ server <- function(input, output, session) {
   # re level timepoint level
   observe({
     updateSelectInput(session, "group","Metacolumn to Color with (eg. Patient_ID):",
-                      choices = colnames(data_2_plot()))
+                      choices = input$meta_col)
     
     updateSelectInput(session, "facet","Metacolumn to Seprate Panel With (optional, eg.Treatment Group)",
-                choices = colnames(data_2_plot()))
+                choices = c("", input$meta_col))
     
     updateSelectInput(session, "timepoint","Select Timepoint Column",
-                choices = colnames(data_2_plot()))
+                choices = input$meta_col)
   })
   
   output$tplevel <- renderUI({
@@ -101,29 +101,6 @@ server <- function(input, output, session) {
     temp
   })
   
-  #output$data_2_plot_u <- DT::renderDT({
-  #  data_2_plot_1()
-  #})
-  
-#  plot_1 <- reactive({
-#    req(data_2_plot_1())
-#    lapply(1:length(input$column_2_plot), function(x){
-#      ggplot(data_2_plot_1(), aes_string(x = input$timepoint, y = input$column_2_plot[x], 
-#                                              color = input$group))+
-#        geom_point()
-#    })
-#  })
-#  
-#  observe({
-#    req(plot_1())
-#    dl <- input$column_2_plot
-#    for(x in 1:length(input$column_2_plot)){
-#      output[[paste0('p', x)]] <- renderUI({
-#        paste(dl[x], "d")
-#      })
-#    }
-#  })
-  
   #https://gist.github.com/wch/5436415 https://stackoverflow.com/questions/36799901/r-markdown-shiny-renderplot-list-of-plots-from-lapply
   # update if normalized by baseline
   # generate plot
@@ -137,50 +114,70 @@ server <- function(input, output, session) {
     })
     do.call(tagList, plot_list)
   })
- 
-# plot_1 <- reactive({
-#   req(data_2_plot_1())
-#   lapply(input$column_2_plot, function(x){
-#     data_2_plot_1()[, c(input$meta_col, x)] 
-#     
-      #    if(input$plot_tpye == "Dot"){
-      #      plot_1 <- plot_1+
-      #        geom_point()
-      #    }
-      #    else if(input$plot_tpye == "Box"){
-      #      plot_1 <- plot_1+
-      #        geom_boxplot()
-      #    }
-      #    else {
-      #      plot_1 <- plot_1+
-      #        geom_violin()
-      #    }
-      #    
-      #    if(!is.null(input$facet)){
-      #      plot_1 <- plot_1+
-      #        facet_wrap(. ~ !!as.symbol(input$facet))
-      #    }
-#    })
-#  })
   
+  plot_opt <- reactive({
+    list(input$plot_tpye,
+         input$facet,
+         input$group)
+  })
   
-  observe({
+  observeEvent(plot_opt(), {
     req(data_2_plot_1())
-    n <- length(input$column_2_plot)
     
-    for(i in 1:n){
+    df <- data_2_plot_1()
+    
+    if(!is.null(input$facet)){
+      df_mean <- aggregate(df[, input$column_2_plot],
+                list(df[, input$timepoint],
+                     df[, input$group],
+                     df[, input$facet]),
+                mean)
+      colnames(df_mean)[1:3] <- c(input$timepoint, input$group, input$facet)
+    }
+    else {
+      df_mean <- aggregate(df[, input$column_2_plot],
+                           list(df[, input$timepoint],
+                                df[, input$group]),
+                           mean)
+      colnames(df_mean)[1:2] <- c(input$timepoint, input$group)
+    }
+   
+    for(i in 1:length(input$column_2_plot)){
       local({
-        df <- data_2_plot_1()
-        x_var <- input$timepoint
-        y_var <- input$column_2_plot[i]
-        g_var <- input$group
-        
         plot_name <- paste("plot", i, sep = "")
+        yvar <- input$column_2_plot[i]
         
         output[[plot_name]] <- renderPlot({
-          p <- ggplot(df, aes_string(x = x_var, y = y_var, 
-                       color = g_var))+
-            geom_point()
+          p <- df %>%
+            ggplot(aes_string(x = input$timepoint, y = yvar, color = input$group))+
+            labs(title = yvar)
+          
+          if(input$plot_tpye == "dot"){
+              p <- p+
+                geom_point()
+            }
+          if(input$plot_tpye == "box"){
+            p <- p+
+              geom_boxplot()
+          }
+          if(input$plot_tpye == "line") {
+            p <- df_mean %>%
+              ggplot(aes_string(x = input$timepoint, y = yvar, color = input$group))+
+              labs(title = yvar)+
+              geom_point()+
+              geom_line(aes_string(group = df_mean[, input$group]))
+          }
+          if(!is.null(input$facet)){
+            p <- p+
+              facet_wrap(get(input$facet) ~ ., scales = "free_y")+
+              theme_classic()+
+              theme(plot.title = element_text(hjust = 0.5, size = 12))
+          }
+          else{
+            p <- p+
+              theme_classic()+
+              theme(plot.title = element_text(hjust = 0.5, size = 12))
+          }
           print(p)
         })
       })

@@ -1,0 +1,12 @@
+name: newdir
+title: newdir
+username:
+account: jiq4001
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2759686
+bundleId: 3597411
+url: https://jiq4001.shinyapps.io/newdir/
+when: 1599350122.04301
+asMultiple: FALSE
+asStatic: FALSE

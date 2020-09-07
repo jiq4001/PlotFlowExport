@@ -29,7 +29,6 @@ body <- dashboardBody(
       # output input data
       tags$hr(), 
       DT::dataTableOutput("flowdata"), 
-      style = "height:500px; overflow-y: scroll; overflow-x: scroll",
       
       # select plotting parameters 
       tags$hr(),
@@ -73,7 +72,9 @@ body <- dashboardBody(
       tags$hr(),
       #actionButton("norm_bl", "(Optional)Normalize by Baseline Value\nPlot log(timepoint/baseline)")
       radioButtons('plot_tpye', 'Plot Tpye', 
-                   c('Dot', 'Box', 'Violine'),
+                   list('Dot' = "dot", 
+                        'Box' = "box", 
+                        'Line' = "line"),
                    inline = TRUE),
       
       tags$hr(),
